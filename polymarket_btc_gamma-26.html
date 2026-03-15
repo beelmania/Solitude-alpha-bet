@@ -1,0 +1,1905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BTC ENTRY ALERT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg: #06080c;
+    --panel: #0c1018;
+    --border: #1a2030;
+    --up: #00ff88;
+    --down: #ff3355;
+    --warn: #ffcc00;
+    --dim: #2a3a4a;
+    --text: #c8d8e8;
+    --muted: #3a5060;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    min-height: 100vh;
+    padding: 10px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .topbar-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 3px;
+    color: var(--warn);
+    text-shadow: 0 0 12px rgba(255,204,0,0.3);
+  }
+
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--muted);
+  }
+
+  .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+  .dot.live  { background:var(--up);   box-shadow:0 0 6px var(--up);   animation:blink 1.2s infinite; }
+  .dot.warn  { background:var(--warn); box-shadow:0 0 6px var(--warn); animation:blink 0.8s infinite; }
+  .dot.error { background:var(--down); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* SYNC STATUS BAR */
+  .sync-bar {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .sync-label { font-size: 9px; color: var(--muted); letter-spacing: 2px; }
+
+  .sync-val {
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sync-item { display: flex; flex-direction: column; gap: 2px; }
+
+  .poly-link {
+    font-size: 10px;
+    color: var(--warn);
+    text-decoration: none;
+    border: 1px solid var(--dim);
+    padding: 4px 10px;
+    border-radius: 3px;
+  }
+
+  /* ALERT BOX */
+  .alert-box {
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 10px;
+    transition: all 0.4s ease;
+  }
+  .alert-box.neutral  { border-color:var(--border); background:var(--panel); }
+  .alert-box.watch    { border-color:var(--warn);   background:rgba(255,204,0,0.05); }
+  .alert-box.go-up    { border-color:var(--up);   background:rgba(0,255,136,0.07); box-shadow:0 0 30px rgba(0,255,136,0.15); animation:goFlash 0.5s ease; }
+  .alert-box.go-down  { border-color:var(--down); background:rgba(255,51,85,0.07);  box-shadow:0 0 30px rgba(255,51,85,0.15);  animation:goFlash 0.5s ease; }
+  .alert-box.too-late { border-color:var(--dim);  background:var(--panel); }
+
+  @keyframes goFlash { 0%{transform:scale(1)} 40%{transform:scale(1.025)} 100%{transform:scale(1)} }
+
+  .alert-label  { font-size:10px; letter-spacing:3px; color:var(--muted); margin-bottom:8px; }
+  .alert-signal { font-family:'Bebas Neue',sans-serif; font-size:52px; letter-spacing:4px; line-height:1; transition:color 0.3s; }
+  .alert-sub    { font-size:11px; color:var(--muted); margin-top:6px; line-height:1.5; }
+
+  /* PRICE ROW */
+  .price-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .price-card { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:10px; text-align:center; }
+  .pc-label   { font-size:9px; color:var(--muted); letter-spacing:2px; margin-bottom:4px; }
+  .pc-val     { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1px; transition:color 0.3s; }
+  .pc-sub     { font-size:9px; color:var(--dim); margin-top:2px; }
+
+  /* MAIN ROW */
+  .main-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+
+  .info-card  { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:12px; }
+  .ic-label   { font-size:9px; color:var(--muted); letter-spacing:2px; margin-bottom:6px; }
+  .ic-val     { font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:2px; transition:color 0.3s; }
+  .ic-sub     { font-size:10px; color:var(--muted); margin-top:4px; }
+
+  /* TIMER */
+  .timer-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .timer-ring-svg { transform:rotate(-90deg); }
+  .ring-bg   { fill:none; stroke:var(--border); stroke-width:4; }
+  .ring-fill { fill:none; stroke-width:4; stroke-linecap:round; transition:stroke-dashoffset 0.9s linear, stroke 0.4s; }
+  .timer-num { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; text-align:center; margin-top:-4px; transition:color 0.3s; }
+  .timer-zone{ font-size:9px; letter-spacing:2px; text-align:center; margin-top:2px; transition:color 0.3s; }
+
+  /* POLY ODDS */
+  .odds-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+
+  .odds-card { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:10px 12px; }
+  .odds-title{ font-size:9px; letter-spacing:2px; margin-bottom:6px; }
+  .odds-price{ font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; }
+  .odds-bar-wrap { height:4px; background:var(--border); border-radius:2px; margin-top:6px; overflow:hidden; }
+  .odds-bar-fill { height:100%; border-radius:2px; transition:width 0.6s; }
+
+  /* MOMENTUM */
+  .mom-strip { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:10px 12px; margin-bottom:10px; display:flex; align-items:center; gap:12px; }
+  .mom-label { font-size:9px; color:var(--muted); letter-spacing:2px; white-space:nowrap; }
+  .mom-bars  { display:flex; gap:2px; align-items:flex-end; height:28px; flex:1; }
+  .mb        { flex:1; border-radius:1px 1px 0 0; min-width:4px; }
+  .mom-bias  { font-size:11px; font-weight:700; white-space:nowrap; }
+
+  /* FFT PANEL */
+  .fft-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .fft-label { font-size:9px; color:var(--muted); letter-spacing:2px; white-space:nowrap; }
+  .fft-bars  { display:flex; gap:2px; align-items:flex-end; height:32px; flex:1; }
+  .fb { flex:1; border-radius:1px 1px 0 0; min-width:3px; transition:height 0.3s, background 0.3s; }
+  .fft-signal { display:flex; flex-direction:column; gap:2px; min-width:90px; }
+  .fft-sig-val { font-size:12px; font-weight:700; }
+  .fft-sig-sub { font-size:9px; color:var(--muted); letter-spacing:1px; }
+
+  /* CONTROLS */
+  .controls { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:10px 12px; margin-bottom:10px; display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+  .ctrl      { display:flex; flex-direction:column; gap:4px; }
+  .ctrl-label{ font-size:9px; color:var(--muted); letter-spacing:2px; }
+  .ctrl-val  { color:var(--warn); font-size:11px; }
+
+  input[type=range] { -webkit-appearance:none; width:100px; height:3px; background:var(--border); border-radius:2px; outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:var(--warn); cursor:pointer; }
+
+  /* LOG */
+  .log       { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:10px 12px; }
+  .log-title { font-size:9px; color:var(--muted); letter-spacing:3px; margin-bottom:8px; }
+  .log-list  { max-height:100px; overflow-y:auto; display:flex; flex-direction:column; gap:3px; }
+  .log-item  { font-size:10px; color:var(--muted); font-variant-numeric:tabular-nums; animation:fadeIn 0.3s; }
+  .log-item .ts { color:var(--dim); }
+  .log-item.up   { color:var(--up); }
+  .log-item.down { color:var(--down); }
+  .log-item.warn { color:var(--warn); }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(-3px)} to{opacity:1;transform:none} }
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-thumb { background:var(--dim); border-radius:2px; }
+
+  /* ONE-TAP BUY PANEL */
+  .buy-panel {
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .buy-btn {
+    border: none;
+    border-radius: 5px;
+    padding: 16px 8px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .buy-btn:active { transform: scale(0.96); filter: brightness(1.2); }
+  .buy-btn.up-btn   { background: rgba(0,255,136,0.15); color: var(--up);   border: 2px solid var(--up); }
+  .buy-btn.down-btn { background: rgba(255,51,85,0.15);  color: var(--down); border: 2px solid var(--down); }
+  .buy-btn.disabled { background: rgba(255,255,255,0.03); color: var(--dim); border: 2px solid var(--dim); cursor: default; }
+  .buy-btn.hot-up   { background: rgba(0,255,136,0.25); color: var(--up);   border: 2px solid var(--up);
+                      box-shadow: 0 0 20px rgba(0,255,136,0.3); animation: hotPulse 1s ease-in-out infinite; }
+  .buy-btn.hot-down { background: rgba(255,51,85,0.25);  color: var(--down); border: 2px solid var(--down);
+                      box-shadow: 0 0 20px rgba(255,51,85,0.3); animation: hotPulse 1s ease-in-out infinite; }
+
+  @keyframes hotPulse { 0%,100%{opacity:1} 50%{opacity:0.75} }
+
+  .buy-btn-label { font-size: 10px; letter-spacing: 2px; opacity: 0.7; }
+  .buy-btn-amount{ font-size: 12px; letter-spacing: 1px; opacity: 0.9; font-family: 'Space Mono', monospace; }
+
+  /* CONTRACT SIZE */
+  .contract-row {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .contract-label { font-size:9px; color:var(--muted); letter-spacing:2px; white-space:nowrap; }
+  .contract-btns  { display:flex; gap:6px; flex-wrap:wrap; }
+  .csize-btn {
+    background: var(--bg);
+    border: 1px solid var(--dim);
+    color: var(--muted);
+    padding: 5px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .csize-btn.active { background: var(--warn); color: #000; border-color: var(--warn); font-weight:700; }
+  .csize-btn:active { transform: scale(0.95); }
+  .model-panel {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .model-panel.edge-positive { border-color: var(--up);   box-shadow: 0 0 12px rgba(0,255,136,0.1); }
+  .model-panel.edge-negative { border-color: var(--down); box-shadow: 0 0 12px rgba(255,51,85,0.1); }
+  .model-panel.edge-neutral  { border-color: var(--border); }
+
+  .mp-cell { display:flex; flex-direction:column; gap:3px; align-items:center; text-align:center; }
+  .mp-label { font-size:9px; color:var(--muted); letter-spacing:2px; }
+  .mp-val   { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:1px; transition:color 0.3s; }
+  .mp-sub   { font-size:9px; letter-spacing:1px; }
+
+  /* PHASE CLASSIFIER */
+  .phase-panel {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    transition: border-color 0.4s, box-shadow 0.4s;
+  }
+  .phase-panel.trending { border-color: var(--up);   box-shadow: 0 0 10px rgba(0,255,136,0.12); }
+  .phase-panel.choppy   { border-color: var(--muted); }
+  .phase-panel.spike    { border-color: var(--down);  box-shadow: 0 0 10px rgba(255,51,85,0.12); }
+  .phase-panel.watching { border-color: var(--warn);  }
+
+  .phase-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .phase-title { font-size:9px; color:var(--muted); letter-spacing:3px; }
+  .phase-label {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:22px; letter-spacing:3px;
+    transition: color 0.3s;
+  }
+  .phase-checkpoints {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+  .cp-cell {
+    background: rgba(0,0,0,0.2);
+    border-radius: 3px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .cp-cell.active { background: rgba(255,204,0,0.08); border: 1px solid var(--warn); }
+  .cp-cell.done-trend { background: rgba(0,255,136,0.08); border: 1px solid var(--up); }
+  .cp-cell.done-chop  { background: rgba(60,70,90,0.2); border: 1px solid var(--dim); }
+  .cp-cell.done-spike { background: rgba(255,51,85,0.08); border: 1px solid var(--down); }
+  .cp-time  { font-size:9px; color:var(--muted); letter-spacing:1px; }
+  .cp-val   { font-size:11px; font-weight:700; margin-top:2px; }
+  .cp-label { font-size:9px; margin-top:1px; }
+
+  /* TRAJECTORY + CONE CHART */
+  .traj-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .traj-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .traj-title { font-size:9px; color:var(--muted); letter-spacing:3px; }
+  .traj-edge-tag { font-size:11px; font-weight:700; }
+  .traj-charts { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .traj-chart-label { font-size:9px; color:var(--muted); letter-spacing:1px; margin-bottom:4px; text-align:center; }
+  .traj-svg { width:100%; display:block; overflow:visible; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-title">BTC ENTRY ALERT</div>
+  <div class="live-badge">
+    <div class="dot" id="dot"></div>
+    <span id="status">CONNECTING</span>
+    &nbsp;·&nbsp;
+    <span id="last-tick">--:--:--</span>
+  </div>
+</div>
+
+<!-- SYNC BAR -->
+<div class="sync-bar">
+  <div class="sync-item">
+    <div class="sync-label">POLY WINDOW</div>
+    <div class="sync-val" id="poly-window" style="color:var(--warn)">SYNCING…</div>
+  </div>
+  <div class="sync-item">
+    <div class="sync-label">POLY STRIKE</div>
+    <div class="sync-val" id="poly-strike" style="color:var(--warn)">--</div>
+  </div>
+  <div class="sync-item">
+    <div class="sync-label">POLY SYNC</div>
+    <div class="sync-val" id="poly-sync-status" style="color:var(--muted)">--</div>
+  </div>
+  <a id="poly-link" href="#" target="_blank" class="poly-link">OPEN ↗</a>
+</div>
+
+<!-- ALERT BOX -->
+<div class="alert-box neutral" id="alert-box">
+  <div class="alert-label">SIGNAL</div>
+  <div class="alert-signal" id="alert-signal" style="color:var(--muted)">SYNCING</div>
+  <div class="alert-sub" id="alert-sub">Fetching Polymarket window…</div>
+</div>
+
+<!-- CONTRACT SIZE -->
+<div class="contract-row">
+  <div class="contract-label">CONTRACT SIZE</div>
+  <div class="contract-btns">
+    <button class="csize-btn" onclick="setSize(1)">$1</button>
+    <button class="csize-btn active" onclick="setSize(5)">$5</button>
+    <button class="csize-btn" onclick="setSize(10)">$10</button>
+    <button class="csize-btn" onclick="setSize(25)">$25</button>
+    <button class="csize-btn" onclick="setSize(50)">$50</button>
+    <button class="csize-btn" onclick="setSize(100)">$100</button>
+  </div>
+  <div style="margin-left:auto;font-size:10px;color:var(--muted)">
+    TO WIN: <span id="to-win-display" style="color:var(--warn);font-weight:700">--</span>
+  </div>
+</div>
+
+<!-- ONE-TAP BUY -->
+<div class="buy-panel">
+  <button class="buy-btn up-btn disabled" id="btn-buy-up" onclick="quickBuy('up')">
+    <span class="buy-btn-label">TAP TO BUY</span>
+    ▲ UP
+    <span class="buy-btn-amount" id="btn-up-amount">--</span>
+  </button>
+  <button class="buy-btn down-btn disabled" id="btn-buy-down" onclick="quickBuy('down')">
+    <span class="buy-btn-label">TAP TO BUY</span>
+    ▼ DOWN
+    <span class="buy-btn-amount" id="btn-down-amount">--</span>
+  </button>
+</div>
+
+<!-- PRICE ROW -->
+<div class="price-row">
+  <div class="price-card">
+    <div class="pc-label">BYBIT</div>
+    <div class="pc-val" id="price-bybit">--</div>
+    <div class="pc-sub" id="bybit-vs-strike">--</div>
+  </div>
+  <div class="price-card">
+    <div class="pc-label">BINANCE</div>
+    <div class="pc-val" id="price-binance">--</div>
+    <div class="pc-sub" id="binance-vs-strike">--</div>
+  </div>
+  <div class="price-card">
+    <div class="pc-label">COINBASE</div>
+    <div class="pc-val" id="price-coinbase">--</div>
+    <div class="pc-sub" id="coinbase-vs-strike">--</div>
+  </div>
+</div>
+
+<!-- RUG DETECTOR -->
+<div class="main-row" style="margin-bottom:10px">
+  <div class="info-card">
+    <div class="ic-label">EST. CHAINLINK SETTLE</div>
+    <div class="ic-val" id="chainlink-est" style="color:var(--warn)">--</div>
+    <div class="ic-sub" id="chainlink-buffer">-- from strike</div>
+  </div>
+  <div class="info-card">
+    <div class="ic-label">EXCHANGE DIVERGENCE</div>
+    <div class="ic-val" id="exch-div" style="color:var(--muted)">--</div>
+    <div class="ic-sub" id="exch-div-label">bybit vs others</div>
+  </div>
+</div>
+
+<!-- SPREAD + TIMER -->
+<div class="main-row">
+  <div class="info-card">
+    <div class="ic-label">SPREAD VS STRIKE</div>
+    <div class="ic-val" id="spread-bps" style="color:var(--muted)">--</div>
+    <div class="ic-sub" id="spread-dollar">-- from strike</div>
+  </div>
+
+  <div class="info-card timer-wrap">
+    <div class="ic-label" style="text-align:center">TIME LEFT</div>
+    <svg class="timer-ring-svg" width="80" height="80" viewBox="0 0 80 80">
+      <circle class="ring-bg"   cx="40" cy="40" r="34"/>
+      <circle class="ring-fill" id="timer-ring" cx="40" cy="40" r="34"
+        stroke-dasharray="213.6" stroke-dashoffset="0" stroke="var(--muted)"/>
+    </svg>
+    <div class="timer-num"  id="timer-display" style="color:var(--muted)">--:--</div>
+    <div class="timer-zone" id="timer-zone"    style="color:var(--muted)">SYNCING</div>
+  </div>
+</div>
+
+<!-- MOMENTUM -->
+<div class="mom-strip">
+  <div class="mom-label">MOMENTUM</div>
+  <div class="mom-bars" id="mom-bars"></div>
+  <div class="mom-bias" id="mom-bias" style="color:var(--muted)">--</div>
+</div>
+
+<!-- FFT CYCLE PANEL -->
+<div class="fft-panel">
+  <div class="fft-label">FOURIER<br>CYCLE</div>
+  <div class="fft-bars" id="fft-bars"></div>
+  <div class="fft-signal">
+    <div class="fft-sig-val" id="fft-phase" style="color:var(--muted)">--</div>
+    <div class="fft-sig-sub" id="fft-period">-- SEC CYCLE</div>
+    <div class="fft-sig-sub" id="fft-reversal" style="color:var(--warn)">--</div>
+  </div>
+</div>
+
+<!-- MODEL PROBABILITY PANEL -->
+<div class="model-panel edge-neutral" id="model-panel">
+  <div class="mp-cell">
+    <div class="mp-label">MODEL P(UP)</div>
+    <div class="mp-val" id="model-pup" style="color:var(--up)">--</div>
+    <div class="mp-sub" id="model-pup-sub" style="color:var(--muted)">BS PRICER</div>
+  </div>
+  <div class="mp-cell">
+    <div class="mp-label">MARKET P(UP)</div>
+    <div class="mp-val" id="market-pup" style="color:var(--muted)">--</div>
+    <div class="mp-sub" style="color:var(--muted)">POLY ODDS</div>
+  </div>
+  <div class="mp-cell">
+    <div class="mp-label">EDGE (¢/share)</div>
+    <div class="mp-val" id="model-edge" style="color:var(--muted)">--</div>
+    <div class="mp-sub" id="model-edge-sub" style="color:var(--muted)">MODEL - MKT</div>
+  </div>
+</div>
+
+<!-- PHASE CLASSIFIER -->
+<div class="phase-panel watching" id="phase-panel">
+  <div class="phase-header">
+    <div class="phase-title">CANDLE PHASE</div>
+    <div class="phase-label" id="phase-label" style="color:var(--muted)">WATCHING</div>
+  </div>
+  <div class="phase-checkpoints">
+    <div class="cp-cell" id="cp-2min">
+      <div class="cp-time">2 MIN MARK</div>
+      <div class="cp-val" id="cp-2min-val" style="color:var(--muted)">--</div>
+      <div class="cp-label" id="cp-2min-label" style="color:var(--muted)">VOL SIGNATURE</div>
+    </div>
+    <div class="cp-cell" id="cp-3min">
+      <div class="cp-time">3 MIN MARK</div>
+      <div class="cp-val" id="cp-3min-val" style="color:var(--muted)">--</div>
+      <div class="cp-label" id="cp-3min-label" style="color:var(--muted)">PHASE LOCK</div>
+    </div>
+    <div class="cp-cell" id="cp-entry">
+      <div class="cp-time">ENTRY ZONE</div>
+      <div class="cp-val" id="cp-entry-val" style="color:var(--muted)">--</div>
+      <div class="cp-label" id="cp-entry-label" style="color:var(--muted)">60-90s LEFT</div>
+    </div>
+  </div>
+</div>
+
+<!-- TRAJECTORY + CONE CHART -->
+<div class="traj-panel">
+  <div class="traj-header">
+    <div class="traj-title">PROBABILITY TRAJECTORY</div>
+    <div class="traj-edge-tag" id="traj-edge-tag" style="color:var(--muted)">--</div>
+  </div>
+  <div class="traj-charts">
+    <div>
+      <div class="traj-chart-label">PROB CURVE vs MARKET</div>
+      <svg class="traj-svg" id="traj-svg" viewBox="0 0 150 80"></svg>
+    </div>
+    <div>
+      <div class="traj-chart-label">PRICE CONE</div>
+      <svg class="traj-svg" id="cone-svg" viewBox="0 0 150 80"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="ctrl">
+    <div class="ctrl-label">MIN SPREAD ($) — RUG BUFFER</div>
+    <input type="range" id="min-dollar" min="20" max="300" value="100" step="10" oninput="onCtrl()">
+    <span class="ctrl-val" id="min-dollar-val">$100</span>
+  </div>
+  <div class="ctrl">
+    <div class="ctrl-label">MIN SPREAD (BPS)</div>
+    <input type="range" id="min-spread" min="2" max="40" value="10" oninput="onCtrl()">
+    <span class="ctrl-val" id="min-spread-val">10 bps</span>
+  </div>
+  <div class="ctrl">
+    <div class="ctrl-label">MANUAL STRIKE</div>
+    <input type="number" id="manual-strike" placeholder="e.g. 71648"
+      style="background:var(--bg);border:1px solid var(--dim);color:var(--text);padding:4px 8px;font-family:'Space Mono',monospace;font-size:11px;width:120px;border-radius:3px;"
+      oninput="onManualStrike(this.value)">
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="log">
+  <div class="log-title">SIGNAL LOG</div>
+  <div class="log-list" id="log-list"></div>
+</div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────
+const S = {
+  price: null, prevPrice: null,
+  priceBybit: null, priceBinance: null, priceCoinbase: null,
+  chainlinkEst: null, exchDivergence: null,
+  priceSource: '--',
+  fftPhase: null, fftConfidence: 0, fftNearReversal: false,
+  fftSecsToPeak: null, fftSecsToTrough: null,
+  fftProjectedDelta: 0, fftInnovation: 0,
+  modelPUp: null, modelEdge: null, modelSigma: null,
+  distanceRatio: null, priceVelocity: 0, modelUnstable: false,
+  // Phase classifier
+  phase: null,          // 'trending' | 'choppy' | 'spike' | null
+  phaseLocked: false,   // true once locked at 3-min mark
+  phase2minVol: null,   // vol signature from 2-min mark
+  phase2minRatio: null, // displacement/path at 2-min mark
+  candleOpen: null,     // price at candle open (= strike proxy)
+  candlePath: [],       // price ticks from window open
+  lastCheckpoint: null, // which checkpoint just fired
+  history: [],
+  // Polymarket data
+  strikePrice: null,       // from Poly Gamma API
+  windowStart: null,       // unix timestamp
+  windowEnd: null,
+  upTokenId: null,
+  downTokenId: null,
+  oddsUp: null,
+  oddsDown: null,
+  polySlug: null,
+  // settings
+  minSpreadBps: 10,
+  minSpreadDollar: 100,
+  contractSize: 5,        // default $5 per trade
+  lastSignalDir: null,    // 'up' or 'down' — last GO signal direction
+  // internal
+  logs: [],
+  lastSignalKey: '',
+  polyPollInterval: null,
+};
+
+const CIRC = 2 * Math.PI * 34;
+const fmt   = n => n ? '$' + n.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1}) : '--';
+const fmtB  = n => (n>=0?'+':'')+n.toFixed(1)+' bps';
+const tsNow = () => new Date().toTimeString().slice(0,8);
+
+function log(msg, cls='') {
+  S.logs.unshift({ ts: tsNow(), msg, cls });
+  if (S.logs.length > 40) S.logs.pop();
+  document.getElementById('log-list').innerHTML = S.logs.slice(0,15).map(e =>
+    `<div class="log-item ${e.cls}"><span class="ts">[${e.ts}]</span> ${e.msg}</div>`
+  ).join('');
+}
+
+function onCtrl() {
+  S.minSpreadBps    = +document.getElementById('min-spread').value;
+  S.minSpreadDollar = +document.getElementById('min-dollar').value;
+  document.getElementById('min-spread-val').textContent = S.minSpreadBps + ' bps';
+  document.getElementById('min-dollar-val').textContent = '$' + S.minSpreadDollar;
+}
+
+function onManualStrike(v) {
+  const p = parseFloat(v);
+  if (p > 1000) {
+    S.strikePrice = p;
+    document.getElementById('poly-strike').textContent = fmt(p);
+    document.getElementById('strike-display').textContent = fmt(p);
+    document.getElementById('poly-sync-status').textContent = 'MANUAL';
+    document.getElementById('poly-sync-status').style.color = 'var(--warn)';
+    log(`Manual strike set → ${fmt(p)}`, 'warn');
+  }
+}
+
+function setSize(amount) {
+  S.contractSize = amount;
+  // Update active button
+  document.querySelectorAll('.csize-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === '$' + amount);
+  });
+  updateBuyButtons();
+}
+
+function updateBuyButtons() {
+  const size    = S.contractSize;
+  const upOdds  = S.oddsUp   || 0.5;
+  const dnOdds  = S.oddsDown || 0.5;
+  const toWinUp = size / upOdds;
+  const toWinDn = size / dnOdds;
+  const signal  = S.lastSignalDir;
+
+  // TO WIN display
+  const toWinEl = document.getElementById('to-win-display');
+  if (signal === 'up') {
+    toWinEl.textContent = '$' + toWinUp.toFixed(2);
+    toWinEl.style.color = 'var(--up)';
+  } else if (signal === 'down') {
+    toWinEl.textContent = '$' + toWinDn.toFixed(2);
+    toWinEl.style.color = 'var(--down)';
+  } else {
+    toWinEl.textContent = '$' + toWinUp.toFixed(2) + ' / $' + toWinDn.toFixed(2);
+    toWinEl.style.color = 'var(--warn)';
+  }
+
+  // Button amounts
+  document.getElementById('btn-up-amount').textContent   = `$${size} → win $${toWinUp.toFixed(2)}`;
+  document.getElementById('btn-down-amount').textContent = `$${size} → win $${toWinDn.toFixed(2)}`;
+
+  // Button states — hot if signal matches direction
+  const upBtn  = document.getElementById('btn-buy-up');
+  const dnBtn  = document.getElementById('btn-buy-down');
+
+  if (signal === 'up') {
+    upBtn.className  = 'buy-btn hot-up';
+    dnBtn.className  = 'buy-btn down-btn';
+  } else if (signal === 'down') {
+    upBtn.className  = 'buy-btn up-btn';
+    dnBtn.className  = 'buy-btn hot-down';
+  } else {
+    upBtn.className  = 'buy-btn up-btn disabled';
+    dnBtn.className  = 'buy-btn down-btn disabled';
+  }
+}
+
+function quickBuy(dir) {
+  // Deep-link to Polymarket market page
+  // Polymarket doesn't support pre-filled amount in URL
+  // but we open directly to the current window market page
+  const slug = S.polySlug || `btc-updown-5m-${getCurrentWindowTs()}`;
+  const url  = `https://polymarket.com/event/${slug}`;
+
+  // Log the intended trade
+  const size   = S.contractSize;
+  const odds   = dir === 'up' ? (S.oddsUp || 0.5) : (S.oddsDown || 0.5);
+  const toWin  = (size / odds).toFixed(2);
+  log(`🚀 QUICK BUY ${dir.toUpperCase()} — $${size} → win $${toWin} — opening Poly`, dir === 'up' ? 'up' : 'down');
+
+  // Open Polymarket — user confirms with one tap on Poly
+  window.open(url, '_blank');
+}
+
+
+
+// ── POLYMARKET SYNC ───────────────────────────────────────────────
+// Slug is deterministic: btc-updown-5m-{window_start_unix}
+// Window start = floor(now / 300) * 300
+
+function getCurrentWindowTs() {
+  const now = Math.floor(Date.now() / 1000);
+  return now - (now % 300);
+}
+
+function getTimerSecs() {
+  const now = Math.floor(Date.now() / 1000);
+  const windowEnd = getCurrentWindowTs() + 300;
+  return Math.max(0, windowEnd - now);
+}
+
+// ── POLYMARKET WEBSOCKET ──────────────────────────────────────────
+let polyWs = null;
+let polyWsSlug = null;
+
+function connectPolyWs(upTokenId, downTokenId) {
+  if (polyWs) { try { polyWs.close(); } catch {} polyWs = null; }
+
+  const ws = new WebSocket('wss://ws-subscriptions-clob.polymarket.com/ws/market');
+
+  ws.onopen = () => {
+    const sub = { assets_ids: [upTokenId, downTokenId].filter(Boolean), type: 'market' };
+    ws.send(JSON.stringify(sub));
+    document.getElementById('poly-sync-status').textContent = '⚡ WS LIVE';
+    document.getElementById('poly-sync-status').style.color = 'var(--up)';
+    log('Polymarket WebSocket connected — live odds streaming', 'warn');
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      const type = data.event_type || data.type;
+
+      if (type === 'price_change') {
+        const changes = data.price_changes || [data];
+        for (const c of changes) {
+          const tid = c.asset_id || c.token_id;
+          // mid = (best_bid + best_ask) / 2
+          const bid = parseFloat(c.best_bid || c.bid || 0);
+          const ask = parseFloat(c.best_ask || c.ask || 0);
+          const mid = (bid && ask) ? (bid + ask) / 2 : (bid || ask);
+          if (!mid || isNaN(mid)) continue;
+          if (tid === upTokenId)   S.oddsUp   = mid;
+          if (tid === downTokenId) S.oddsDown = mid;
+        }
+        normaliseAndRenderOdds();
+      }
+
+      if (type === 'book') {
+        const tid = data.asset_id;
+        const bids = data.bids || [];
+        const asks = data.asks || [];
+        const bestBid = bids.length ? parseFloat(bids[0][0] || bids[0].price) : null;
+        const bestAsk = asks.length ? parseFloat(asks[0][0] || asks[0].price) : null;
+        const mid = (bestBid && bestAsk) ? (bestBid + bestAsk) / 2 : (bestBid || bestAsk);
+        if (mid && !isNaN(mid)) {
+          if (tid === upTokenId)   S.oddsUp   = mid;
+          if (tid === downTokenId) S.oddsDown = mid;
+          normaliseAndRenderOdds();
+        }
+      }
+
+      if (type === 'last_trade_price') {
+        const tid = data.asset_id;
+        const price = parseFloat(data.price);
+        if (!isNaN(price)) {
+          if (tid === upTokenId)   S.oddsUp   = price;
+          if (tid === downTokenId) S.oddsDown = price;
+          normaliseAndRenderOdds();
+        }
+      }
+    } catch {}
+  };
+
+  ws.onerror = () => {
+    document.getElementById('poly-sync-status').textContent = 'WS ERR';
+    document.getElementById('poly-sync-status').style.color = 'var(--down)';
+  };
+
+  ws.onclose = () => {
+    // Reconnect after 3s if we still have token IDs
+    setTimeout(() => {
+      if (S.upTokenId || S.downTokenId) connectPolyWs(S.upTokenId, S.downTokenId);
+    }, 3000);
+  };
+
+  polyWs = ws;
+}
+
+function normaliseAndRenderOdds() {
+  if (S.oddsUp !== null && S.oddsDown !== null) {
+    const total = S.oddsUp + S.oddsDown;
+    if (total > 0) { S.oddsUp = S.oddsUp / total; S.oddsDown = S.oddsDown / total; }
+  } else if (S.oddsUp   !== null) { S.oddsDown = 1 - S.oddsUp; }
+  else if (S.oddsDown !== null) { S.oddsUp   = 1 - S.oddsDown; }
+  renderOdds();
+}
+
+// ── POLYMARKET SYNC (gets token IDs then hands off to WS) ─────────
+async function fetchPolymarket() {
+  const windowTs = getCurrentWindowTs();
+  const slug = `btc-updown-5m-${windowTs}`;
+
+  const polyUrl = `https://polymarket.com/event/${slug}`;
+  document.getElementById('poly-link').href = polyUrl;
+  document.getElementById('poly-window').textContent = new Date(windowTs * 1000).toLocaleTimeString();
+
+  // Same window and WS already running — skip
+  if (S.polySlug === slug && polyWs && polyWs.readyState === WebSocket.OPEN) return;
+
+  S.polySlug = slug;
+  document.getElementById('poly-sync-status').textContent = 'SYNCING…';
+  document.getElementById('poly-sync-status').style.color = 'var(--warn)';
+
+  const endpoints = [
+    `https://gamma-api.polymarket.com/events?slug=${slug}`,
+    `https://corsproxy.io/?https://gamma-api.polymarket.com/events?slug=${slug}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent('https://gamma-api.polymarket.com/events?slug=' + slug)}`,
+  ];
+
+  let data = null;
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const raw = await res.json();
+      data = raw.contents ? JSON.parse(raw.contents) : raw;
+      if (data && data.length) break;
+    } catch { continue; }
+  }
+
+  if (!data || !data.length) {
+    document.getElementById('poly-sync-status').textContent = 'NOT YET';
+    if (S.price && !S.strikePrice) { S.strikePrice = S.price; updateStrikeDisplay('APPROX'); }
+    log('Window not indexed yet — enter strike manually', 'warn');
+    return;
+  }
+
+  const event  = data[0];
+  const markets = event.markets || [];
+
+  // ── Strike price ──
+  let strike = null;
+  if (event.startPrice) strike = parseFloat(event.startPrice);
+  if (!strike) {
+    for (const m of markets) {
+      if (m.startPrice)   { strike = parseFloat(m.startPrice);   break; }
+      if (m.initialPrice) { strike = parseFloat(m.initialPrice); break; }
+    }
+  }
+  if (!strike) {
+    const text = event.description || event.title || JSON.stringify(event);
+    const match = text.match(/price to beat[:\s]*\$?([\d,]+\.?\d*)/i)
+                || text.match(/\$?(7[0-9],[0-9]{3}\.?\d*)/);
+    if (match) strike = parseFloat(match[1].replace(/,/g,''));
+  }
+  if (strike && strike > 1000) { S.strikePrice = strike; updateStrikeDisplay('✓ SYNCED'); log(`Strike → ${fmt(strike)}`, 'warn'); }
+  else if (S.price && !S.strikePrice) { S.strikePrice = S.price; updateStrikeDisplay('APPROX'); }
+
+  // ── Token IDs → WebSocket ──
+  let upTokenId = null, downTokenId = null;
+  for (const m of markets) {
+    const title = (m.groupItemTitle || m.question || m.title || '').toLowerCase();
+    const isUp   = title.includes('up') || title.includes('higher') || title.includes('above');
+    const isDown = title.includes('down') || title.includes('lower') || title.includes('below');
+    const tid = m.clobTokenIds?.[0] || m.clob_token_ids?.[0];
+    if (isUp   && tid) upTokenId   = tid;
+    if (isDown && tid) downTokenId = tid;
+
+    // Also grab outcomePrices as initial seed while WS connects
+    if (m.outcomePrices) {
+      try {
+        const prices = typeof m.outcomePrices === 'string' ? JSON.parse(m.outcomePrices) : m.outcomePrices;
+        if (isUp   && !isNaN(parseFloat(prices[0]))) S.oddsUp   = parseFloat(prices[0]);
+        if (isDown && !isNaN(parseFloat(prices[0]))) S.oddsDown = parseFloat(prices[0]);
+      } catch {}
+    }
+  }
+
+  S.upTokenId   = upTokenId;
+  S.downTokenId = downTokenId;
+  normaliseAndRenderOdds();
+
+  // Connect WebSocket for live streaming odds
+  if (upTokenId || downTokenId) {
+    connectPolyWs(upTokenId, downTokenId);
+  } else {
+    log('No token IDs found — odds will not stream live', 'down');
+  }
+}
+
+function updateStrikeDisplay(syncLabel) {
+  document.getElementById('poly-strike').textContent = fmt(S.strikePrice);
+  document.getElementById('strike-display').textContent = fmt(S.strikePrice);
+  document.getElementById('poly-sync-status').textContent = syncLabel;
+  document.getElementById('poly-sync-status').style.color = syncLabel.includes('✓') || syncLabel.includes('WS') ? 'var(--up)' : 'var(--warn)';
+}
+
+function fetchPolyOdds() { /* replaced by WebSocket */ }
+
+
+
+function renderOdds() {
+  const up   = S.oddsUp;
+  const down = S.oddsDown;
+  if (up !== null) {
+    document.getElementById('odds-up').textContent     = (up*100).toFixed(0) + '¢';
+    document.getElementById('odds-bar-up').style.width = (up*100) + '%';
+  }
+  if (down !== null) {
+    document.getElementById('odds-down').textContent     = (down*100).toFixed(0) + '¢';
+    document.getElementById('odds-bar-down').style.width = (down*100) + '%';
+  }
+}
+
+// ── TIMER ─────────────────────────────────────────────────────────
+function renderTimer() {
+  const t = getTimerSecs();
+  const disp = `${Math.floor(t/60)}:${(t%60).toString().padStart(2,'0')}`;
+  const offset = CIRC * (1 - t / 300);
+
+  let col, zone;
+  if      (t > 120) { col = 'var(--muted)'; zone = 'WAITING'; }
+  else if (t > 90)  { col = 'var(--warn)';  zone = '⚡ GET READY'; }
+  else if (t > 20)  { col = 'var(--up)';    zone = '🎯 ENTRY ZONE'; }
+  else              { col = 'var(--down)';  zone = '🚫 TOO LATE'; }
+
+  const ring = document.getElementById('timer-ring');
+  ring.style.stroke = col;
+  ring.style.strokeDashoffset = offset;
+  document.getElementById('timer-display').textContent = disp;
+  document.getElementById('timer-display').style.color = col;
+  document.getElementById('timer-zone').textContent = zone;
+  document.getElementById('timer-zone').style.color  = col;
+
+  // Detect window rollover — new window just started
+  if (t > 295) {
+    // Just rolled over — fetch new Poly window
+    fetchPolymarket();
+  }
+}
+
+// ── MOMENTUM ──────────────────────────────────────────────────────
+function getMomentum() {
+  const h = S.history;
+  if (h.length < 6) return { bias: 0, accel: 0 };
+  const deltas = [];
+  for (let i = 1; i < h.length; i++) deltas.push(h[i] - h[i-1]);
+  const recent = deltas.slice(-5).reduce((a,b)=>a+b,0) / 5;
+  const older  = deltas.slice(-15,-5);
+  const olderA = older.length ? older.reduce((a,b)=>a+b,0)/older.length : 0;
+  return { bias: recent, accel: recent - olderA };
+}
+
+function renderMomentum() {
+  const h = S.history.slice(-20);
+  if (h.length < 2) return;
+  let html = '';
+  for (let i = 1; i < h.length; i++) {
+    const d = h[i] - h[i-1];
+    const ht = Math.min(Math.abs(d) / 15 * 100 + 8, 100);
+    const op = 0.3 + 0.7 * (i / h.length);
+    html += `<div class="mb" style="height:${ht}%;background:${d>=0?'var(--up)':'var(--down)'};opacity:${op}"></div>`;
+  }
+  document.getElementById('mom-bars').innerHTML = html;
+
+  const { bias, accel } = getMomentum();
+  const bEl = document.getElementById('mom-bias');
+  if (Math.abs(bias) < 0.3) { bEl.textContent = '→ FLAT';     bEl.style.color = 'var(--muted)'; }
+  else if (bias > 0)        { bEl.textContent = accel > 0 ? '↑↑ ACCEL' : '↑ FADING'; bEl.style.color = 'var(--up)'; }
+  else                      { bEl.textContent = accel < 0 ? '↓↓ ACCEL' : '↓ FADING'; bEl.style.color = 'var(--down)'; }
+
+  renderFFT();
+}
+
+// ── KALMAN-FFT HYBRID ENGINE ──────────────────────────────────────
+// Step 1: DFT on recent history → dominant cycle frequency + phase
+// Step 2: Project that cycle forward to entry window
+// Step 3: Recursive Kalman-esque smoothing — blends new observation
+//         with model prediction. Innovation = how much model was wrong.
+//         High innovation = cycle breaking down = low confidence.
+
+// Kalman state — persists between ticks
+const KF = {
+  freq: null,       // dominant frequency (ticks)
+  amp:  null,       // amplitude
+  phase: null,      // current phase estimate (radians)
+  innovation: 0,    // prediction error (phase residual)
+  confidence: 0,    // 0-100
+  alpha: 0.30,      // observation weight — how much to trust new FFT vs model
+};
+
+function dft(signal) {
+  const mean = signal.reduce((a,b)=>a+b,0) / signal.length;
+  const x = signal.map(v => v - mean);
+  const N = x.length;
+  const result = [];
+  for (let k = 1; k < Math.floor(N/2); k++) {
+    let re = 0, im = 0;
+    for (let n = 0; n < N; n++) {
+      const angle = (2 * Math.PI * k * n) / N;
+      re += x[n] * Math.cos(angle);
+      im -= x[n] * Math.sin(angle);
+    }
+    const amp = Math.sqrt(re*re + im*im) / N;
+    result.push({ k, freq: k/N, amp, phase: Math.atan2(im, re), re, im });
+  }
+  return result;
+}
+
+function wrapPhase(p) {
+  // Wrap phase to [-π, π]
+  return ((p + Math.PI) % (2*Math.PI) + 2*Math.PI) % (2*Math.PI) - Math.PI;
+}
+
+function updateKalman(spectrum, N) {
+  if (!spectrum.length) return;
+
+  const totalAmp = spectrum.reduce((s,x) => s+x.amp, 0);
+  const dominant = spectrum.reduce((best,s) => s.amp > best.amp ? s : best, spectrum[0]);
+
+  // Raw observed phase at current tick (end of window)
+  const observedPhase = wrapPhase(
+    ((2 * Math.PI * dominant.k * (N-1)) / N) + dominant.phase
+  );
+
+  if (KF.freq === null) {
+    // First run — initialise from observation directly
+    KF.freq  = dominant.freq;
+    KF.amp   = dominant.amp;
+    KF.phase = observedPhase;
+    KF.innovation = 0;
+    KF.confidence = Math.round((dominant.amp / totalAmp) * 100);
+    return;
+  }
+
+  // ── Predict where phase should be now based on previous model ──
+  // Phase advances by 2π × freq each tick
+  const predictedPhase = wrapPhase(KF.phase + 2 * Math.PI * KF.freq);
+
+  // ── Innovation = difference between predicted and observed ──
+  const innovation = Math.abs(wrapPhase(observedPhase - predictedPhase));
+  KF.innovation = innovation; // store raw innovation
+
+  // ── Update phase: blend prediction with observation ──
+  // If innovation is small, trust prediction more (model is working)
+  // If innovation is large, trust observation more (regime change)
+  const dynamicAlpha = Math.min(0.8, KF.alpha + innovation * 0.5);
+  KF.phase = wrapPhase(predictedPhase + dynamicAlpha * wrapPhase(observedPhase - predictedPhase));
+
+  // ── Slowly update freq and amp toward new observation ──
+  KF.freq = KF.freq * 0.9 + dominant.freq * 0.1;
+  KF.amp  = KF.amp  * 0.8 + dominant.amp  * 0.2;
+
+  // ── Confidence: high when innovation is low AND dominant freq is strong ──
+  const freqStrength = Math.round((dominant.amp / totalAmp) * 100);
+  const innovationPenalty = Math.min(50, Math.round(innovation * 30));
+  KF.confidence = Math.max(0, Math.min(100, freqStrength - innovationPenalty));
+}
+
+function projectPrice(ticksAhead) {
+  // Project the smoothed cycle forward by ticksAhead ticks
+  // Returns predicted price delta from current (positive = up, negative = down)
+  if (KF.amp === null) return 0;
+  const futurePhase = KF.phase + 2 * Math.PI * KF.freq * ticksAhead;
+  return KF.amp * Math.sin(futurePhase);
+}
+
+function renderFFT() {
+  const h = S.history;
+  if (h.length < 16) {
+    document.getElementById('fft-phase').textContent = 'BUILDING…';
+    document.getElementById('fft-period').textContent = 'NEED 32s DATA';
+    document.getElementById('fft-reversal').textContent = '--';
+    return;
+  }
+
+  const slice    = h.slice(-32);
+  const spectrum = dft(slice);
+  if (!spectrum.length) return;
+
+  // ── Update Kalman state ──
+  updateKalman(spectrum, slice.length);
+
+  // ── Render spectrum bars (from raw DFT, not smoothed) ──
+  const dominant = spectrum.reduce((best,s) => s.amp > best.amp ? s : best, spectrum[0]);
+  const maxAmp   = Math.max(...spectrum.map(s=>s.amp), 0.001);
+  document.getElementById('fft-bars').innerHTML = spectrum.slice(0,15).map((s,i) => {
+    const ht  = Math.max(4, (s.amp / maxAmp) * 100);
+    const isDom = s === dominant;
+    const col = isDom ? 'var(--warn)' : `hsl(${140 + i*8},70%,45%)`;
+    return `<div class="fb" style="height:${ht}%;background:${col};opacity:${isDom?1:0.45}"></div>`;
+  }).join('');
+
+  // ── Current phase descriptor from smoothed KF state ──
+  const normPhase = ((KF.phase % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+  const periodSecs = Math.round((1 / KF.freq) * 2); // ticks → seconds
+
+  const inUpPhase  = normPhase > Math.PI/2 && normPhase < Math.PI*1.5;
+  const distToPeak = normPhase < Math.PI ? Math.PI - normPhase : 3*Math.PI - normPhase;
+  const distToTrough = (2*Math.PI - normPhase);
+  const nearPeak   = distToPeak   < 0.35;
+  const nearTrough = distToTrough < 0.35;
+  const secsToPeak   = Math.round((distToPeak   / (2*Math.PI)) * periodSecs);
+  const secsToTrough = Math.round((distToTrough / (2*Math.PI)) * periodSecs);
+
+  // ── Forward projection — where will price be at entry zone? ──
+  // Entry zone = ~60s from now = 30 ticks at 2s poll
+  const ticksToEntry = 30;
+  const projectedDelta = projectPrice(ticksToEntry);
+  const projectedPrice = S.price ? S.price + projectedDelta : null;
+  const projDir = projectedDelta > 0.5 ? '↑' : projectedDelta < -0.5 ? '↓' : '→';
+
+  // ── Innovation indicator ──
+  const innovText = KF.innovation < 0.3 ? 'STABLE' : KF.innovation < 0.8 ? 'DRIFTING' : 'BREAKING';
+
+  // Phase label
+  let phaseText, phaseColor, reversalText;
+  const conf = KF.confidence;
+  const confLabel = conf > 50 ? `${conf}%` : conf > 30 ? `${conf}% ~` : 'LOW';
+
+  if (nearPeak) {
+    phaseText = '▲ PEAK'; phaseColor = 'var(--down)';
+    reversalText = `↓ reversal ~${Math.max(2,secsToPeak)}s · model ${innovText}`;
+  } else if (nearTrough) {
+    phaseText = '▼ TROUGH'; phaseColor = 'var(--up)';
+    reversalText = `↑ reversal ~${Math.max(2,secsToTrough)}s · model ${innovText}`;
+  } else if (inUpPhase) {
+    phaseText = '↑ RISING'; phaseColor = 'var(--up)';
+    reversalText = `peak ~${secsToPeak}s · ${projDir} proj ${projectedPrice ? '$'+projectedPrice.toFixed(0) : '--'} · ${innovText}`;
+  } else {
+    phaseText = '↓ FALLING'; phaseColor = 'var(--down)';
+    reversalText = `trough ~${secsToTrough}s · ${projDir} proj ${projectedPrice ? '$'+projectedPrice.toFixed(0) : '--'} · ${innovText}`;
+  }
+
+  // ── Store for evaluate() ──
+  S.fftPhase        = inUpPhase ? 'up' : 'down';
+  S.fftConfidence   = conf;
+  S.fftNearReversal = nearPeak || nearTrough;
+  S.fftProjectedDelta = projectedDelta;
+  S.fftInnovation   = KF.innovation;
+
+  document.getElementById('fft-phase').textContent   = `${phaseText}`;
+  document.getElementById('fft-phase').style.color   = phaseColor;
+  document.getElementById('fft-period').textContent  = `${periodSecs}s CYCLE · CONF ${confLabel}`;
+  document.getElementById('fft-reversal').textContent = reversalText;
+  document.getElementById('fft-reversal').style.color = nearPeak||nearTrough ? 'var(--warn)' :
+                                                         KF.innovation > 0.8 ? 'var(--down)' : 'var(--muted)';
+}
+
+// ── BINARY OPTION PROBABILITY ENGINE ─────────────────────────────
+// Abramowitz & Stegun normal CDF approximation — 7 decimal place accuracy
+// Pure JS, no libraries, runs in microseconds on phone
+
+function normCDF(x) {
+  if (x < -8) return 0;
+  if (x >  8) return 1;
+  const a1= 0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  const t = 1 / (1 + p * Math.abs(x) / Math.sqrt(2));
+  const poly = t*(a1+t*(a2+t*(a3+t*(a4+t*a5))));
+  return 0.5 * (1 + sign * (1 - poly * Math.exp(-x*x/2)));
+}
+
+function realisedVol() {
+  // Short-term vol from last 30 ticks — ~60 seconds of data
+  const h = S.history;
+  if (h.length < 10) return null;
+  const slice = h.slice(-30);
+  const logReturns = [];
+  for (let i = 1; i < slice.length; i++) {
+    if (slice[i-1] > 0) logReturns.push(Math.log(slice[i] / slice[i-1]));
+  }
+  if (!logReturns.length) return null;
+  const mean = logReturns.reduce((a,b)=>a+b,0) / logReturns.length;
+  const variance = logReturns.reduce((s,r) => s+(r-mean)**2, 0) / logReturns.length;
+  // Annualise from 2s ticks
+  return Math.sqrt(variance) * Math.sqrt((365*24*3600) / 2);
+}
+
+function priceVelocity() {
+  // Dollar move per second over last 5 ticks (~10s)
+  // Used as stability filter — high velocity = signal suppressed
+  const h = S.history;
+  if (h.length < 5) return 0;
+  const slice = h.slice(-5);
+  const totalMove = Math.abs(slice[slice.length-1] - slice[0]);
+  return totalMove / (slice.length * 2); // $/sec
+}
+
+function binaryOptionProb(S_price, K_strike, t_secs, sigma_annual) {
+  if (!S_price || !K_strike || t_secs <= 0 || !sigma_annual) return null;
+
+  // T^0.7 time decay — more accurate near expiry than linear T
+  // Binary options probability accelerates faster than BS assumes in final minute
+  const t_years_raw = t_secs / (365 * 24 * 3600);
+  const t_years = Math.pow(t_years_raw, 0.7) * Math.pow(1/(365*24*3600), 0.3);
+
+  const d2 = Math.log(S_price / K_strike) / (sigma_annual * Math.sqrt(t_years));
+
+  // Cap at 95/5 — 100% is a lie, always some tail risk
+  return Math.min(0.95, Math.max(0.05, normCDF(d2)));
+}
+
+function distanceRatio(S_price, K_strike, t_secs, sigma_annual) {
+  // |price - strike| / expected_move
+  // expected_move = σ * sqrt(T) in dollar terms
+  // Interpretation: <0.5 coin flip, 0.5-1 uncertain, 1-2 leaning, >2 near-certain
+  if (!S_price || !K_strike || t_secs <= 0 || !sigma_annual) return null;
+  const t_years = t_secs / (365 * 24 * 3600);
+  const expectedMove = sigma_annual * Math.sqrt(t_years) * S_price;
+  return Math.abs(S_price - K_strike) / expectedMove;
+}
+
+function updateModelPanel() {
+  if (!S.price || !S.strikePrice) return;
+
+  const t      = getTimerSecs();
+  const sigma  = realisedVol();
+  const vel    = priceVelocity();
+  if (!sigma || t <= 0) return;
+
+  const S_price   = S.chainlinkEst || S.price;
+  const modelPUp  = binaryOptionProb(S_price, S.strikePrice, t, sigma);
+  if (modelPUp === null) return;
+
+  const distR     = distanceRatio(S_price, S.strikePrice, t, sigma);
+  const marketPUp = S.oddsUp;
+
+  // Edge in cents
+  const edgeCents = marketPUp !== null
+    ? Math.round((modelPUp - marketPUp) * 100)
+    : null;
+
+  // Stability — suppress if velocity too high
+  const unstable = vel > 15; // $15/sec = regime change
+
+  // Store for evaluate()
+  S.modelPUp      = modelPUp;
+  S.modelSigma    = sigma;
+  S.modelEdge     = edgeCents;
+  S.distanceRatio = distR;
+  S.priceVelocity = vel;
+  S.modelUnstable = unstable;
+
+  // ── Distance ratio label ──
+  let distLabel, distColor;
+  if      (distR === null)  { distLabel = '--';           distColor = 'var(--muted)'; }
+  else if (distR < 0.5)     { distLabel = 'COIN FLIP';    distColor = 'var(--muted)'; }
+  else if (distR < 1.0)     { distLabel = 'UNCERTAIN';    distColor = 'var(--warn)';  }
+  else if (distR < 2.0)     { distLabel = 'LEANING';      distColor = 'var(--up)';    }
+  else                      { distLabel = 'NEAR CERTAIN'; distColor = 'var(--up)';    }
+
+  // Unstable override
+  if (unstable) { distLabel = '⚡ UNSTABLE'; distColor = 'var(--down)'; }
+
+  const sigPct   = (sigma * 100).toFixed(1);
+  const pUpPct   = (modelPUp * 100).toFixed(0) + '%';
+  const mktPct   = marketPUp !== null ? (marketPUp * 100).toFixed(0) + '%' : '--';
+  const edgeStr  = edgeCents !== null ? (edgeCents >= 0 ? '+' : '') + edgeCents + '¢' : '--';
+  const distStr  = distR !== null ? distR.toFixed(2) + 'σ' : '--';
+
+  const pUpCol   = modelPUp > 0.65 ? 'var(--up)' : modelPUp < 0.35 ? 'var(--down)' : 'var(--warn)';
+  const edgeCol  = edgeCents === null ? 'var(--muted)'
+                 : edgeCents > 8  ? 'var(--up)'
+                 : edgeCents < -8 ? 'var(--down)'
+                 : 'var(--warn)';
+
+  const panel = document.getElementById('model-panel');
+  panel.className = unstable              ? 'model-panel edge-neutral'
+                  : edgeCents === null    ? 'model-panel edge-neutral'
+                  : edgeCents > 8        ? 'model-panel edge-positive'
+                  : edgeCents < -8       ? 'model-panel edge-negative'
+                  : 'model-panel edge-neutral';
+
+  document.getElementById('model-pup').textContent      = pUpPct;
+  document.getElementById('model-pup').style.color      = pUpCol;
+  document.getElementById('model-pup-sub').textContent  = `σ=${sigPct}% · ${distStr} ${distLabel}`;
+  document.getElementById('model-pup-sub').style.color  = distColor;
+  document.getElementById('market-pup').textContent     = mktPct;
+  document.getElementById('market-pup').style.color     = marketPUp !== null
+    ? (marketPUp > 0.65 ? 'var(--up)' : marketPUp < 0.35 ? 'var(--down)' : 'var(--warn)')
+    : 'var(--muted)';
+  document.getElementById('model-edge').textContent     = unstable ? 'SKIP' : edgeStr;
+  document.getElementById('model-edge').style.color     = unstable ? 'var(--down)' : edgeCol;
+  document.getElementById('model-edge-sub').textContent = unstable ? `vel $${vel.toFixed(1)}/s`
+    : edgeCents !== null
+    ? (Math.abs(edgeCents) > 8 ? '⚡ EDGE FOUND' : 'WITHIN NOISE')
+    : 'NO MARKET ODDS';
+  document.getElementById('model-edge-sub').style.color = unstable ? 'var(--down)' : edgeCol;
+
+  // Render trajectory and cone after model is updated
+  renderTrajectory();
+}
+
+// ── TRAJECTORY + CONE CHART ENGINE ───────────────────────────────
+// Pure SVG — no canvas, no libraries, phone-friendly
+
+function renderTrajectory() {
+  if (!S.price || !S.strikePrice || !S.modelSigma) return;
+
+  const W = 150, H = 80;
+  const pad = { l:20, r:8, t:8, b:16 };
+  const cW = W - pad.l - pad.r;
+  const cH = H - pad.t - pad.b;
+
+  const t_total = 300; // 5 min window
+  const t_now   = getTimerSecs();
+  const sigma   = S.modelSigma;
+  const S_price = S.chainlinkEst || S.price;
+  const K       = S.strikePrice;
+  const mktP    = S.oddsUp; // market probability line
+
+  // ── CHART 1: Probability trajectory ──
+  // Plot model P(Up) at 8 time points from t_now → 0
+  const timePoints = [];
+  const steps = 8;
+  for (let i = 0; i <= steps; i++) {
+    const t_secs = Math.max(1, t_now * (1 - i / steps));
+    const p = binaryOptionProb(S_price, K, t_secs, sigma);
+    timePoints.push({ t: t_now - t_secs, p });
+  }
+
+  // X: 0=now, cW=expiry  Y: 0=100%, cH=0%
+  const tx = (t) => pad.l + (t / t_now) * cW;
+  const py = (p) => pad.t + (1 - p) * cH;
+
+  // Build model curve path
+  let modelPath = '';
+  timePoints.forEach((pt, i) => {
+    modelPath += (i === 0 ? 'M' : 'L') + tx(pt.t).toFixed(1) + ',' + py(pt.p).toFixed(1);
+  });
+
+  // Current model prob
+  const curP = timePoints[0].p;
+  const curPColor = curP > 0.65 ? '#00ff88' : curP < 0.35 ? '#ff3355' : '#ffcc00';
+
+  // Market price line (horizontal)
+  const mktLine = mktP !== null
+    ? `<line x1="${pad.l}" y1="${py(mktP).toFixed(1)}" x2="${W-pad.r}" y2="${py(mktP).toFixed(1)}"
+         stroke="#ffcc00" stroke-width="1" stroke-dasharray="3,2" opacity="0.7"/>`
+    : '';
+
+  // Edge fill — area between model curve and market line
+  let edgeFill = '';
+  if (mktP !== null) {
+    const fillColor = curP > mktP ? 'rgba(0,255,136,0.1)' : 'rgba(255,51,85,0.1)';
+    let fillPath = `M${pad.l},${py(mktP).toFixed(1)}`;
+    timePoints.forEach(pt => { fillPath += `L${tx(pt.t).toFixed(1)},${py(pt.p).toFixed(1)}`; });
+    fillPath += `L${W-pad.r},${py(mktP).toFixed(1)}Z`;
+    edgeFill = `<path d="${fillPath}" fill="${fillColor}"/>`;
+  }
+
+  // Grid lines at 25%, 50%, 75%
+  const gridLines = [0.25, 0.5, 0.75].map(p =>
+    `<line x1="${pad.l}" y1="${py(p).toFixed(1)}" x2="${W-pad.r}" y2="${py(p).toFixed(1)}"
+       stroke="#1a2030" stroke-width="0.5"/>`
+  ).join('');
+
+  // Y axis labels
+  const yLabels = [0.25, 0.5, 0.75].map(p =>
+    `<text x="${pad.l-2}" y="${(py(p)+3).toFixed(1)}" fill="#3a5060" font-size="6" text-anchor="end">${(p*100).toFixed(0)}</text>`
+  ).join('');
+
+  // X axis labels: now → expiry
+  const xLabel = `<text x="${pad.l}" y="${H-2}" fill="#3a5060" font-size="6">NOW</text>
+    <text x="${W-pad.r}" y="${H-2}" fill="#3a5060" font-size="6" text-anchor="end">EXP</text>`;
+
+  // Current position dot
+  const dot = `<circle cx="${pad.l}" cy="${py(curP).toFixed(1)}" r="3" fill="${curPColor}"/>`;
+
+  // Edge tag
+  const edgeCents = mktP !== null ? Math.round((curP - mktP) * 100) : null;
+  const edgeTag   = edgeCents !== null
+    ? (edgeCents > 0 ? `+${edgeCents}¢` : `${edgeCents}¢`)
+    : '--';
+  const edgeTagColor = edgeCents === null ? '#3a5060' : edgeCents > 8 ? '#00ff88' : edgeCents < -8 ? '#ff3355' : '#ffcc00';
+
+  document.getElementById('traj-edge-tag').textContent  = `EDGE ${edgeTag}`;
+  document.getElementById('traj-edge-tag').style.color  = edgeTagColor;
+
+  document.getElementById('traj-svg').innerHTML = `
+    ${gridLines}
+    ${yLabels}
+    ${xLabel}
+    ${edgeFill}
+    ${mktLine}
+    <path d="${modelPath}" stroke="${curPColor}" stroke-width="1.5" fill="none"/>
+    ${dot}
+    <text x="${pad.l+2}" y="${(py(curP)-4).toFixed(1)}" fill="${curPColor}" font-size="7" font-weight="bold">${(curP*100).toFixed(0)}%</text>
+  `;
+
+  // ── CHART 2: Price cone ──
+  // Show ±1σ, ±2σ bands from current price, strike as horizontal line
+  // X: 0=now → cW=expiry   Y: price range
+
+  const priceRange = sigma * S_price * Math.sqrt(t_now / (365*24*3600));
+  const pMin = S_price - priceRange * 2.2;
+  const pMax = S_price + priceRange * 2.2;
+  const pRange = pMax - pMin;
+
+  const coneX = (t_secs) => pad.l + ((t_now - t_secs) / t_now) * cW;
+  const coneY = (price)  => pad.t + (1 - (price - pMin) / pRange) * cH;
+
+  // Cone bands at each time step
+  const conePts1up = [], conePts1dn = [], conePts2up = [], conePts2dn = [];
+  for (let i = 0; i <= 20; i++) {
+    const t_secs = Math.max(1, t_now * (1 - i/20));
+    const move = sigma * S_price * Math.sqrt(t_secs / (365*24*3600));
+    const x = coneX(t_secs).toFixed(1);
+    conePts2up.push(`${x},${coneY(S_price + move*2).toFixed(1)}`);
+    conePts1up.push(`${x},${coneY(S_price + move).toFixed(1)}`);
+    conePts1dn.unshift(`${x},${coneY(S_price - move).toFixed(1)}`);
+    conePts2dn.unshift(`${x},${coneY(S_price - move*2).toFixed(1)}`);
+  }
+
+  // Build cone polygon paths
+  const band2Path = `M${conePts2up.join('L')}L${conePts2dn.join('L')}Z`;
+  const band1Path = `M${conePts1up.join('L')}L${conePts1dn.join('L')}Z`;
+
+  // Strike line
+  const strikeLine = K >= pMin && K <= pMax
+    ? `<line x1="${pad.l}" y1="${coneY(K).toFixed(1)}" x2="${W-pad.r}" y2="${coneY(K).toFixed(1)}"
+         stroke="#ffcc00" stroke-width="1.2" stroke-dasharray="3,2"/>`
+    : '';
+
+  // Current price dot
+  const coneDot = `<circle cx="${pad.l}" cy="${coneY(S_price).toFixed(1)}" r="3" fill="${curPColor}"/>`;
+
+  // Strike label
+  const strikeLabel = K >= pMin && K <= pMax
+    ? `<text x="${W-pad.r+1}" y="${(coneY(K)+3).toFixed(1)}" fill="#ffcc00" font-size="6">K</text>`
+    : '';
+
+  // Direction indicator — is price above or below strike?
+  const aboveStrike = S_price > K;
+  const dirLabel = `<text x="${pad.l+2}" y="${H-2}" fill="${aboveStrike?'#00ff88':'#ff3355'}" font-size="6">
+    ${aboveStrike ? '▲ ABOVE' : '▼ BELOW'}</text>`;
+
+  document.getElementById('cone-svg').innerHTML = `
+    <path d="${band2Path}" fill="rgba(100,120,160,0.08)"/>
+    <path d="${band1Path}" fill="rgba(100,120,160,0.12)"/>
+    ${strikeLine}
+    ${strikeLabel}
+    ${coneDot}
+    ${dirLabel}
+    <text x="${pad.l}" y="${H-2}" fill="#3a5060" font-size="6">NOW</text>
+    <text x="${W-pad.r}" y="${H-2}" fill="#3a5060" font-size="6" text-anchor="end">EXP</text>
+  `;
+}
+
+// ── PHASE CLASSIFIER ENGINE ───────────────────────────────────────
+// Three checkpoints: 2-min mark, 3-min mark (lock), entry zone
+// Core metric: displacement/path ratio + early vol signature
+
+function displacementRatio(ticks) {
+  // How directionally efficient was the move?
+  // 1.0 = perfect trend, 0.0 = pure noise
+  if (!ticks || ticks.length < 2) return null;
+  const netMove  = Math.abs(ticks[ticks.length-1] - ticks[0]);
+  const totalPath = ticks.reduce((sum, p, i) => i === 0 ? sum : sum + Math.abs(p - ticks[i-1]), 0);
+  return totalPath > 0 ? netMove / totalPath : 0;
+}
+
+function candleVolSignature(ticks) {
+  // Returns { earlyVol, lateVol, volRatio }
+  // earlyVol = std of first half, lateVol = std of second half
+  if (!ticks || ticks.length < 8) return null;
+  const mid   = Math.floor(ticks.length / 2);
+  const early = ticks.slice(0, mid);
+  const late  = ticks.slice(mid);
+  const std = (arr) => {
+    const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+    return Math.sqrt(arr.reduce((s,x)=>s+(x-m)**2,0)/arr.length);
+  };
+  const earlyVol = std(early.map((p,i) => i===0?0:p-early[i-1]).slice(1));
+  const lateVol  = std(late.map((p,i)  => i===0?0:p-late[i-1]).slice(1));
+  return { earlyVol, lateVol, volRatio: lateVol > 0 ? earlyVol/lateVol : 1 };
+}
+
+function classifyPhase(dispRatio, volSig, spreadDollar) {
+  // TRENDING: clean directional move, early vol > late vol (vol exhausting)
+  // CHOPPY:   low displacement despite movement
+  // SPIKE:    high displacement but created quickly (vol burst, not trend)
+  if (dispRatio === null) return null;
+
+  const isChoppy   = dispRatio < 0.3;
+  const isTrending = dispRatio > 0.6 && (!volSig || volSig.volRatio > 1.2);
+  const isSpike    = dispRatio > 0.6 && volSig && volSig.volRatio < 0.7; // late vol still high
+
+  if (isChoppy)   return 'choppy';
+  if (isSpike)    return 'spike';
+  if (isTrending) return 'trending';
+  return 'uncertain';
+}
+
+function runPhaseClassifier() {
+  const t = getTimerSecs();
+  if (!S.strikePrice || !S.price) return;
+
+  // Build candle path from history — ticks since window open
+  // We approximate window open as the moment strike was set
+  // Use full history as candle path (reset when new window detected)
+  if (!S.candleOpen && S.strikePrice) S.candleOpen = S.strikePrice;
+
+  // Add current price to candle path
+  if (S.price && (S.candlePath.length === 0 || S.candlePath[S.candlePath.length-1] !== S.price)) {
+    S.candlePath.push(S.price);
+    if (S.candlePath.length > 150) S.candlePath.shift(); // max 300s at 2s poll
+  }
+
+  const dispRatio = displacementRatio(S.candlePath);
+  const volSig    = candleVolSignature(S.candlePath);
+  const spreadDollar = S.price - S.strikePrice;
+
+  // ── Checkpoint: 2-min mark (t ≈ 180s) ──
+  if (t <= 182 && t >= 176 && !S.phase2minVol) {
+    S.phase2minVol   = volSig;
+    S.phase2minRatio = dispRatio;
+    const label = dispRatio > 0.6 ? 'DIRECTED' : dispRatio > 0.3 ? 'MIXED' : 'CHOPPY';
+    const color = dispRatio > 0.6 ? 'var(--up)' : dispRatio > 0.3 ? 'var(--warn)' : 'var(--muted)';
+    document.getElementById('cp-2min-val').textContent  = dispRatio ? dispRatio.toFixed(2) : '--';
+    document.getElementById('cp-2min-val').style.color  = color;
+    document.getElementById('cp-2min-label').textContent = label;
+    document.getElementById('cp-2min-label').style.color = color;
+    document.getElementById('cp-2min').className = `cp-cell ${dispRatio > 0.6 ? 'done-trend' : dispRatio > 0.3 ? 'active' : 'done-chop'}`;
+    log(`2-MIN: disp ratio ${dispRatio ? dispRatio.toFixed(2) : '--'} → ${label}`, dispRatio > 0.6 ? 'up' : '');
+  }
+
+  // ── Checkpoint: 3-min mark (t ≈ 120s) — PHASE LOCK ──
+  if (t <= 122 && t >= 116 && !S.phaseLocked) {
+    const phase = classifyPhase(dispRatio, volSig, spreadDollar);
+    S.phase       = phase;
+    S.phaseLocked = true;
+
+    const phaseLabels = {
+      trending:  { text:'TRENDING',  color:'var(--up)',   cp:'done-trend' },
+      choppy:    { text:'CHOPPY',    color:'var(--muted)',cp:'done-chop'  },
+      spike:     { text:'SPIKE',     color:'var(--down)', cp:'done-spike' },
+      uncertain: { text:'UNCERTAIN', color:'var(--warn)', cp:'active'     },
+    };
+    const pl = phaseLabels[phase] || phaseLabels.uncertain;
+
+    document.getElementById('cp-3min-val').textContent   = pl.text;
+    document.getElementById('cp-3min-val').style.color   = pl.color;
+    document.getElementById('cp-3min-label').textContent = 'LOCKED';
+    document.getElementById('cp-3min-label').style.color = pl.color;
+    document.getElementById('cp-3min').className         = `cp-cell ${pl.cp}`;
+
+    // Update main phase panel
+    const panel = document.getElementById('phase-panel');
+    panel.className = `phase-panel ${phase}`;
+    document.getElementById('phase-label').textContent  = pl.text;
+    document.getElementById('phase-label').style.color  = pl.color;
+
+    log(`3-MIN LOCK: ${pl.text} | disp ${dispRatio ? dispRatio.toFixed(2) : '--'} | path ${S.candlePath.length} ticks`,
+        phase === 'trending' ? 'up' : phase === 'spike' ? 'down' : '');
+  }
+
+  // ── Checkpoint: Entry zone (t ≈ 90s) ──
+  if (t <= 92 && t >= 86 && S.lastCheckpoint !== 'entry') {
+    S.lastCheckpoint = 'entry';
+    const phase = S.phase || classifyPhase(dispRatio, volSig, spreadDollar);
+    const entryOk = phase === 'trending' || phase === 'uncertain';
+    const entryText = entryOk ? 'GO' : phase === 'choppy' ? 'SKIP' : 'CAUTION';
+    const entryColor = entryOk ? 'var(--up)' : phase === 'choppy' ? 'var(--muted)' : 'var(--down)';
+
+    document.getElementById('cp-entry-val').textContent   = entryText;
+    document.getElementById('cp-entry-val').style.color   = entryColor;
+    document.getElementById('cp-entry-label').textContent = `disp ${dispRatio ? dispRatio.toFixed(2) : '--'}`;
+    document.getElementById('cp-entry-label').style.color = entryColor;
+    document.getElementById('cp-entry').className         = `cp-cell ${entryOk ? 'done-trend' : 'done-chop'}`;
+
+    log(`ENTRY ZONE: phase=${phase} → ${entryText}`, entryOk ? 'up' : 'down');
+    if (navigator.vibrate && entryOk) navigator.vibrate([100, 50, 100]);
+  }
+
+  // ── Reset on new window ──
+  if (t > 295) {
+    S.phase       = null;
+    S.phaseLocked = false;
+    S.phase2minVol = null;
+    S.phase2minRatio = null;
+    S.candleOpen  = S.strikePrice;
+    S.candlePath  = [];
+    S.lastCheckpoint = null;
+    // Reset checkpoint UI
+    ['cp-2min','cp-3min','cp-entry'].forEach(id => {
+      document.getElementById(id).className = 'cp-cell';
+    });
+    document.getElementById('cp-2min-val').textContent   = '--';
+    document.getElementById('cp-3min-val').textContent   = '--';
+    document.getElementById('cp-entry-val').textContent  = '--';
+    document.getElementById('cp-2min-label').textContent  = 'VOL SIGNATURE';
+    document.getElementById('cp-3min-label').textContent  = 'PHASE LOCK';
+    document.getElementById('cp-entry-label').textContent = '60-90s LEFT';
+    document.getElementById('phase-panel').className = 'phase-panel watching';
+    document.getElementById('phase-label').textContent = 'WATCHING';
+    document.getElementById('phase-label').style.color = 'var(--muted)';
+  }
+
+  // Store for evaluate()
+  S.dispRatio = dispRatio;
+}
+
+
+function evaluate() {
+  if (!S.price || !S.strikePrice) return;
+
+  const settleEst    = S.chainlinkEst || S.price;
+  const spreadDollar = settleEst - S.strikePrice;
+  const spreadBps    = (spreadDollar / S.strikePrice) * 10000;
+  const t            = getTimerSecs();
+  const { bias, accel } = getMomentum();
+  const divergence   = S.exchDivergence || 0;
+  const highDiv      = Math.abs(divergence) > 50;
+
+  const bpsEl = document.getElementById('spread-bps');
+  bpsEl.textContent = fmtB(spreadBps);
+  bpsEl.style.color = spreadBps > 0 ? 'var(--up)' : spreadBps < 0 ? 'var(--down)' : 'var(--muted)';
+  const dolEl = document.getElementById('spread-dollar');
+  dolEl.textContent = (spreadDollar>=0?'+':'') + '$' + Math.abs(spreadDollar).toFixed(1) + ' est.settle';
+  dolEl.style.color = spreadBps > 0 ? 'var(--up)' : 'var(--down)';
+
+  const box   = document.getElementById('alert-box');
+  const sigEl = document.getElementById('alert-signal');
+  const subEl = document.getElementById('alert-sub');
+
+  const bpsOk    = Math.abs(spreadBps) >= S.minSpreadBps;
+  const dollarOk = Math.abs(spreadDollar) >= effectiveDollarMin;
+  const spreadOk = bpsOk && dollarOk;
+  const inWindow = t <= 90 && t > 20;
+  const dir      = spreadBps >= 0 ? 'UP' : 'DOWN';
+  const momAligns = (spreadBps > 0 && bias > 0.3) || (spreadBps < 0 && bias < -0.3);
+
+  // Stability filter — suppress signal during fast moves
+  const unstable = S.modelUnstable || false;
+
+  // Distance ratio gate — coin flip territory = no signal
+  const distR    = S.distanceRatio || 0;
+  const distOk   = distR >= 0.5;
+
+  // Phase gate — choppy candle = no signal regardless of spread
+  const phase       = S.phase;
+  const phaseChoppy = phase === 'choppy';
+  const phaseSpike  = phase === 'spike';
+  // Spike = double the dollar buffer requirement
+  const effectiveDollarMin = phaseSpike ? S.minSpreadDollar * 2 : S.minSpreadDollar;
+
+  // FFT phase alignment — does cycle phase agree with spread direction?
+  const fftAligns = S.fftConfidence < 25  // low confidence = ignore FFT
+    ? true
+    : (dir === 'UP'   && S.fftPhase === 'up')
+    || (dir === 'DOWN' && S.fftPhase === 'down');
+  const fftWarning = S.fftNearReversal && S.fftConfidence > 35; // cycle about to flip
+
+  let key = '';
+
+  if (t > 90) {
+    box.className = 'alert-box neutral';
+    sigEl.style.color = 'var(--muted)';
+    sigEl.textContent = 'WATCH';
+    subEl.textContent = `Entry in ${t-90}s · est.settle ${(spreadDollar>=0?'+':'')+'$'+spreadDollar.toFixed(0)} · div $${Math.abs(divergence).toFixed(0)}`;
+    key = 'watch';
+
+  } else if (inWindow && phaseChoppy) {
+    box.className = 'alert-box neutral';
+    sigEl.style.color = 'var(--muted)';
+    sigEl.textContent = 'CHOPPY';
+    subEl.textContent = `Candle structure: no directional bias · disp ratio ${S.dispRatio ? S.dispRatio.toFixed(2) : '--'} · skip`;
+    key = 'choppy';
+
+  } else if (inWindow && phaseSpike && !dollarOk) {
+    box.className = 'alert-box neutral';
+    sigEl.style.color = 'var(--down)';
+    sigEl.textContent = 'SPIKE — RISK';
+    subEl.textContent = `Spike candle · need $${effectiveDollarMin} buffer (2× normal) · currently $${Math.abs(spreadDollar).toFixed(0)}`;
+    key = 'spike-risk';
+
+  } else if (inWindow && highDiv) {
+    box.className = 'alert-box too-late';
+    sigEl.style.color = 'var(--down)';
+    sigEl.textContent = 'RUG RISK';
+    subEl.textContent = `Bybit $${Math.abs(divergence).toFixed(0)} ahead of market · Chainlink will lag · SKIP`;
+    key = 'rug-div';
+    if (key !== S.lastSignalKey) log(`⚠ RUG — div $${divergence.toFixed(0)} — skip`, 'down');
+
+  } else if (inWindow && !dollarOk) {
+    box.className = 'alert-box neutral';
+    sigEl.style.color = 'var(--down)';
+    sigEl.textContent = 'RUG RISK';
+    subEl.textContent = `Est.settle only $${Math.abs(spreadDollar).toFixed(0)} from strike · need $${S.minSpreadDollar}`;
+    key = 'rug-small';
+
+  } else if (inWindow && unstable) {
+    box.className = 'alert-box neutral';
+    sigEl.style.color = 'var(--down)';
+    sigEl.textContent = 'UNSTABLE';
+    subEl.textContent = `Price moving $${(S.priceVelocity||0).toFixed(1)}/s · wait for stability`;
+    key = 'unstable';
+
+  } else if (inWindow && !distOk) {
+    box.className = 'alert-box neutral';
+    sigEl.style.color = 'var(--muted)';
+    sigEl.textContent = 'COIN FLIP';
+    subEl.textContent = `Distance ratio ${distR.toFixed(2)}σ — spread too close to expected move · skip`;
+    key = 'coin-flip';
+
+  } else if (inWindow && spreadOk && momAligns && !highDiv) {
+    // Check FFT — if cycle is about to reverse, downgrade to CAUTION
+    if (fftWarning && !fftAligns) {
+      box.className = 'alert-box watch';
+      sigEl.style.color = 'var(--warn)';
+      sigEl.textContent = 'CAUTION';
+      subEl.textContent = `Spread ok but cycle reversing · FFT ${S.fftConfidence}% conf · wait`;
+      key = 'fft-reversal';
+    } else {
+      box.className = `alert-box go-${dir.toLowerCase()}`;
+      sigEl.style.color = dir === 'UP' ? 'var(--up)' : 'var(--down)';
+      sigEl.textContent = `BUY ${dir}`;
+      const projPrice  = S.price ? '$' + (S.price + S.fftProjectedDelta).toFixed(0) : '--';
+      const modelState = S.fftInnovation < 0.3 ? 'STABLE' : S.fftInnovation < 0.8 ? 'DRIFT' : 'NOISY';
+      const edgeTag    = S.modelEdge !== null
+        ? ` · EDGE ${S.modelEdge > 0 ? '+' : ''}${S.modelEdge}¢`
+        : '';
+      const fftTag = S.fftConfidence > 30
+        ? ` · FFT ${S.fftConfidence}% [${modelState}]`
+        : '';
+      subEl.textContent = `Est.$${Math.abs(spreadDollar).toFixed(0)} · div $${Math.abs(divergence).toFixed(0)}${edgeTag}${fftTag} · ${t}s · hold`;
+      key = `go-${dir}-${Math.floor(t/10)}`;
+      if (key !== S.lastSignalKey) {
+        log(`🎯 BUY ${dir} — est $${Math.abs(spreadDollar).toFixed(0)}${edgeTag} — proj ${projPrice} [${modelState}] — ${t}s`, dir==='UP'?'up':'down');
+        if (navigator.vibrate) navigator.vibrate([200,100,200]);
+      }
+    }
+
+  } else if (inWindow && spreadOk && !momAligns) {
+    box.className = 'alert-box watch';
+    sigEl.style.color = 'var(--warn)';
+    sigEl.textContent = 'WAIT';
+    subEl.textContent = `Buffer ok · momentum not aligned · skip`;
+    key = 'wait';
+
+  } else if (inWindow && !bpsOk) {
+    box.className = 'alert-box neutral';
+    sigEl.style.color = 'var(--muted)';
+    sigEl.textContent = 'NO EDGE';
+    subEl.textContent = `Spread ${fmtB(spreadBps)} · need ${S.minSpreadBps} bps`;
+    key = 'no-edge';
+
+  } else if (t <= 20) {
+    box.className = 'alert-box too-late';
+    sigEl.style.color = 'var(--down)';
+    sigEl.textContent = 'TOO LATE';
+    subEl.textContent = 'Book closing — hold to settlement';
+    key = 'too-late';
+  }
+
+  S.lastSignalKey = key;
+
+  // Update buy button state based on signal direction
+  if (key.startsWith('go-up'))   S.lastSignalDir = 'up';
+  else if (key.startsWith('go-down')) S.lastSignalDir = 'down';
+  else if (key === 'too-late')   { /* keep last dir */ }
+  else S.lastSignalDir = null;
+  updateBuyButtons();
+}
+
+
+// Weights approximate each exchange's share of Chainlink oracle
+const EXCHANGES = [
+  { id:'bybit',    url:'https://api.bybit.com/v5/market/tickers?category=spot&symbol=BTCUSDT', parse:d=>parseFloat(d.result.list[0].lastPrice), weight:0.30 },
+  { id:'binance',  url:'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',           parse:d=>parseFloat(d.price),                    weight:0.40 },
+  { id:'coinbase', url:'https://api.coinbase.com/v2/prices/BTC-USD/spot',                      parse:d=>parseFloat(d.data.amount),              weight:0.30 },
+];
+
+async function fetchExchange(exch) {
+  try {
+    const res = await fetch(exch.url, { cache:'no-store' });
+    if (!res.ok) return null;
+    const d = await res.json();
+    const p = exch.parse(d);
+    return (!p || isNaN(p)) ? null : p;
+  } catch { return null; }
+}
+
+async function pollAll() {
+  // Fetch all three simultaneously
+  const [bybit, binance, coinbase] = await Promise.all(EXCHANGES.map(fetchExchange));
+
+  // Need at least Bybit or Binance
+  if (!bybit && !binance) {
+    document.getElementById('dot').className = 'dot error';
+    document.getElementById('status').textContent = 'RETRYING';
+    return;
+  }
+
+  // Store individual prices
+  S.priceBybit    = bybit;
+  S.priceBinance  = binance;
+  S.priceCoinbase = coinbase;
+
+  // Primary price = Bybit if available, else Binance
+  const primary = bybit || binance;
+  S.prevPrice = S.price;
+  S.price = primary;
+  S.history.push(primary);
+  if (S.history.length > 60) S.history.shift();
+
+  // ── Estimated Chainlink settlement ──
+  // Weighted median of available exchanges
+  const available = EXCHANGES
+    .map((e,i) => ({ price: [bybit,binance,coinbase][i], weight: e.weight }))
+    .filter(e => e.price !== null);
+  const totalWeight = available.reduce((s,e) => s+e.weight, 0);
+  const chainlinkEst = available.reduce((s,e) => s + e.price * (e.weight/totalWeight), 0);
+  S.chainlinkEst = chainlinkEst;
+
+  // ── Exchange divergence ──
+  // How far is Bybit ahead of the weighted average of others
+  const others = available.filter(e => e !== available[0]);
+  const othersAvg = others.length
+    ? others.reduce((s,e) => s + e.price * (e.weight / others.reduce((t,x)=>t+x.weight,0)), 0)
+    : null;
+  S.exchDivergence = (bybit && othersAvg) ? bybit - othersAvg : null;
+
+  // ── Update displays ──
+  updateExchDisplay('bybit',    bybit,    'price-bybit',    'bybit-vs-strike');
+  updateExchDisplay('binance',  binance,  'price-binance',  'binance-vs-strike');
+  updateExchDisplay('coinbase', coinbase, 'price-coinbase', 'coinbase-vs-strike');
+
+  // Chainlink estimate
+  const clBuf = chainlinkEst - (S.strikePrice || chainlinkEst);
+  const clEl  = document.getElementById('chainlink-est');
+  const clBufEl = document.getElementById('chainlink-buffer');
+  clEl.textContent = '$' + chainlinkEst.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+  clEl.style.color = clBuf > 0 ? 'var(--up)' : clBuf < 0 ? 'var(--down)' : 'var(--warn)';
+  clBufEl.textContent = (clBuf>=0?'+':'') + '$' + clBuf.toFixed(1) + ' from strike';
+  clBufEl.style.color = Math.abs(clBuf) < S.minSpreadDollar ? 'var(--down)' : 'var(--up)';
+
+  // Divergence display
+  const divEl = document.getElementById('exch-div');
+  const divLabelEl = document.getElementById('exch-div-label');
+  if (S.exchDivergence !== null) {
+    const div = S.exchDivergence;
+    divEl.textContent = (div>=0?'+':'') + '$' + Math.abs(div).toFixed(1);
+    divEl.style.color = Math.abs(div) > 50 ? 'var(--down)' : Math.abs(div) > 20 ? 'var(--warn)' : 'var(--up)';
+    divLabelEl.textContent = Math.abs(div) > 50 ? '⚠ HIGH RUG RISK' : Math.abs(div) > 20 ? 'MODERATE RISK' : 'ALIGNED ✓';
+    divLabelEl.style.color = Math.abs(div) > 50 ? 'var(--down)' : Math.abs(div) > 20 ? 'var(--warn)' : 'var(--up)';
+  }
+
+  document.getElementById('dot').className = 'dot live';
+  document.getElementById('status').textContent = bybit ? 'BYBIT' : 'BINANCE';
+  document.getElementById('last-tick').textContent = tsNow();
+
+  renderTimer();
+  renderMomentum();
+  updateModelPanel();
+  runPhaseClassifier();
+  evaluate();
+}
+
+function updateExchDisplay(id, price, valId, subId) {
+  const el  = document.getElementById(valId);
+  const sub = document.getElementById(subId);
+  if (!price) { el.textContent = '--'; el.style.color = 'var(--muted)'; sub.textContent = '--'; return; }
+  el.textContent = '$' + price.toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1});
+  el.style.color = 'var(--text)';
+  if (S.strikePrice) {
+    const diff = price - S.strikePrice;
+    sub.textContent = (diff>=0?'+':'') + '$' + diff.toFixed(0) + ' vs strike';
+    sub.style.color = diff > 0 ? 'var(--up)' : diff < 0 ? 'var(--down)' : 'var(--muted)';
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+log('Auto-syncing with Polymarket Gamma API…');
+pollAll();
+setInterval(pollAll, 2000);
+
+fetchPolymarket();
+setInterval(fetchPolymarket, 30000);
+setInterval(() => { renderTimer(); runPhaseClassifier(); renderTrajectory(); }, 1000);
+</script>
+</body>
+</html>
